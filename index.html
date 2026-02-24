@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Ramazan Sabrı - Premium</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:100%; height:100%; background:#050510;
+    overflow:hidden; font-family:'Georgia', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', serif;
+    user-select:none; -webkit-user-select:none; touch-action:none;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  #gameCanvas { display:block; position:absolute; top:0; left:0; width:100%; height:100%; }
+
+  #hud {
+    position:fixed; top:0; left:0; width:100%;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:10px 18px 6px;
+    background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent);
+    pointer-events:none; z-index:20;
+  }
+  .hb { display:flex; flex-direction:column; gap:4px; }
+  .hl { font-size:10px; letter-spacing:1.5px; color:rgba(255,210,100,.8); text-transform:uppercase; }
+  #patienceTrack { width:150px; height:13px; background:rgba(255,255,255,.1); border-radius:7px; border:1px solid rgba(255,200,80,.25); overflow:hidden; }
+  #patienceFill { height:100%; background:linear-gradient(90deg,#f59e0b,#fde68a); border-radius:7px; transition:width .3s ease, background .3s; }
+  #timerWrap { text-align:center; }
+  #dayCounter { font-size: 12px; color: #fde68a; font-weight: bold; margin-bottom: 2px; text-shadow: 0 0 5px orange; }
+  #timerSub { font-size:10px; color:rgba(160,210,255,.7); letter-spacing:2px; }
+  #timer { font-size:30px; color:#fff; text-shadow:0 0 18px rgba(120,190,255,.9); letter-spacing:2px; line-height:1; }
+  #scoreWrap { align-items:flex-end; }
+  #score { font-size:26px; color:#fde68a; text-shadow:0 0 14px rgba(251,191,36,.9); line-height:1; }
+  
+  #groundWarning { position:fixed; bottom:0; left:0; width:100%; height:100px; background:linear-gradient(to top, rgba(255,0,0,0.25), transparent); pointer-events:none; z-index:15; opacity:0; transition:opacity 0.3s; }
+
+  #hallucinationVignette { position:fixed; inset:0; background: radial-gradient(circle, transparent 50%, rgba(255,0,0,0.3) 90%); pointer-events:none; z-index:18; opacity:0; transition:opacity 0.5s; mix-blend-mode: multiply; }
+
+  #slowMoVignette { position:fixed; inset:0; box-shadow: inset 0 0 100px 20px rgba(255, 215, 0, 0.3); pointer-events:none; z-index:19; opacity:0; transition:opacity 0.4s; }
+
+  .pulse { animation:pulse .35s ease; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.38)} }
+
+  #floats { position:fixed; inset:0; pointer-events:none; z-index:30; overflow:hidden; }
+  .ft { position:absolute; font-size:17px; font-weight:700; pointer-events:none; animation:ftUp 1.1s ease-out forwards; }
+  @keyframes ftUp { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(-65px) scale(1.25)} }
+
+  #redFlash { position:fixed; inset:0; background:rgba(220,0,0,.2); pointer-events:none; z-index:40; opacity:0; transition:opacity .15s; }
+
+  #speedBar { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:none; align-items:center; gap:8px; pointer-events:none; z-index:20; }
+  #speedLbl { font-size:10px; color:rgba(255,200,80,.5); letter-spacing:1.5px; }
+  #speedTrack { width:90px; height:5px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+  #speedFill { height:100%; background:linear-gradient(90deg,#10b981,#f59e0b,#ef4444); border-radius:3px; transition:width .5s; }
+
+  #touchHint { position:fixed; bottom:48px; left:50%; transform:translateX(-50%); font-size:11px; color:rgba(200,220,255,.4); letter-spacing:1.5px; pointer-events:none; z-index:20; white-space:nowrap; display:none; animation:blink 2s ease infinite; }
+  @keyframes blink { 0%,100%{opacity:.4} 50%{opacity:.9} }
+
+  #muteBtn { position:fixed; bottom:25px; right:25px; z-index:50; background:rgba(0,0,0,0.6); border:1px solid rgba(255,200,80,0.5); color:#fde68a; border-radius:50%; width:44px; height:44px; font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+
+  #overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.85); backdrop-filter:blur(10px); z-index:100; }
+  #overlayBox { background:linear-gradient(140deg,rgba(12,20,55,.97),rgba(4,8,28,.99)); border:1px solid rgba(255,200,80,.3); border-radius:22px; padding:36px 44px; text-align:center; max-width:450px; width:88%; max-height:90vh; display:flex; flex-direction:column; align-items:center; box-shadow:0 0 70px rgba(245,180,30,.12), inset 0 1px 0 rgba(255,255,255,.08); }
+  
+  #overlayHeader { flex-shrink:0; width:100%; }
+  #overlayIcon { font-size:54px; display:block; margin-bottom:8px; }
+  #overlayTitle { font-size:25px; color:#fde68a; margin-bottom:10px; line-height:1.35; }
+  #overlaySub { font-size:13px; color:rgba(190,215,255,.75); line-height:1.65; margin-bottom:22px; }
+  
+  #overlayStats { display:none; justify-content:space-around; width:100%; margin-bottom:20px; padding:15px; background:rgba(255,255,255,.04); border-radius:12px; border:1px solid rgba(255,200,80,.1); flex-shrink:0; }
+  .si .sn { font-size:23px; color:#fbbf24; }
+  .si .sl { font-size:10px; color:rgba(180,205,255,.55); letter-spacing:1px; margin-top:3px; }
+  
+  #scrollableContent { width:100%; overflow-y:auto; flex-grow:1; margin-bottom:15px; padding-right:5px; }
+  #scrollableContent::-webkit-scrollbar { width: 6px; }
+  #scrollableContent::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius:4px; }
+  #scrollableContent::-webkit-scrollbar-thumb { background: rgba(255,200,80,0.5); border-radius:4px; }
+  
+  #imgHint { background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; border:1px solid rgba(255,200,80,0.2); font-size:11px; color:rgba(180,205,255,.8); margin-top:0; line-height:1.7; text-align:left; }
+  #imgHint span { color:rgba(255,200,80,.9); font-weight:bold; }
+  
+  #finalMessage { display:none; background:rgba(251,191,36,0.1); border-left:4px solid #fbbf24; padding:18px; margin-top:0; text-align:left; border-radius:0 8px 8px 0; }
+  #fmTitle { font-size:14px; color:#fbbf24; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; font-weight:bold; }
+  #fmText { font-size:13px; color:rgba(255,255,255,0.9); line-height:1.6; font-style:italic; }
+
+  #btnContainer { flex-shrink:0; width:100%; }
+  .btn { background:linear-gradient(135deg,#b45309,#f59e0b); color:#fff; border:none; padding:13px 36px; border-radius:50px; font-size:15px; cursor:pointer; font-family:'Georgia', serif; letter-spacing:1px; box-shadow:0 4px 22px rgba(245,158,11,.4); transition:all .2s; pointer-events:all; display:inline-block; }
+  .btn:hover { transform:translateY(-2px); box-shadow:0 6px 28px rgba(245,158,11,.6); }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="groundWarning"></div>
+<div id="hallucinationVignette"></div>
+<div id="slowMoVignette"></div>
+
+<div id="hud">
+  <div class="hb">
+    <div class="hl">🤲 Sabır</div>
+    <div id="patienceTrack"><div id="patienceFill"></div></div>
+  </div>
+  <div class="hb" id="timerWrap">
+    <div id="dayCounter">GÜN: 1</div>
+    <div id="timerSub">☾ SAHUR VAKTİ</div>
+    <div id="timer">1:00</div>
+  </div>
+  <div class="hb" id="scoreWrap">
+    <div class="hl">✨ Sevap</div>
+    <div id="score">0</div>
+  </div>
+</div>
+
+<button id="muteBtn" onclick="toggleMute()">🔊</button>
+
+<div id="floats"></div>
+<div id="redFlash"></div>
+<div id="touchHint">☝️ Basılı tut → Yüksel &nbsp;|&nbsp; Bırak → Alçal</div>
+<div id="speedBar">
+  <div id="speedLbl">ZORLUK</div>
+  <div id="speedTrack"><div id="speedFill" style="width:0%"></div></div>
+</div>
+
+<div id="overlay">
+  <div id="overlayBox">
+    <div id="overlayHeader">
+      <span id="overlayIcon">☾</span>
+      <div id="overlayTitle">Ramazan Sabrı - Premium</div>
+      <div id="overlaySub">Sahurdan İftara 30 Günlük zorlu bir sabır yolculuğu.<br>Nefsin ve şehrin tuzaklarından kaç!</div>
+    </div>
+    
+    <div id="overlayStats">
+      <div class="si"><div class="sn" id="stScore">0</div><div class="sl">SEVAP</div></div>
+      <div class="si"><div class="sn" id="stCol">0</div><div class="sl">TOPLANAN</div></div>
+      <div class="si"><div class="sn" id="stDay">1</div><div class="sl">GÜN</div></div>
+    </div>
+    
+    <div id="scrollableContent">
+      <div id="finalMessage">
+        <h4 id="fmTitle">Günün Hadis-i Şerifi</h4>
+        <p id="fmText"></p>
+      </div>
+      
+      <div id="imgHint">
+        <b style="color:#fbbf24; font-size:13px;">Oyun Rehberi ve Premium Özellikler:</b><br><br>
+        <b>✅ Sevap Nesneleri (Topla):</b><br>
+        Kuran, Tesbih, Dua, İyilik, Sabır, Yıldız, Ay, Kalp, Hurma, Parça<br><br>
+        <b>❌ Orucu Bozanlar (Kaçın):</b><br>
+        Lahmacun, Pide, Kebap, Baklava, Hamburger, Pizza, Su, vb.<br><br>
+        <b>🛡️ Manevi Kalkan (📖):</b><br>
+        Kuran'ı Kerim alırsan mavi kalkan oluşur! 1 kez korur.<br><br>
+        <b>🌟 PREMIUM ÖZELLİKLER:</b><br>
+        🧲 <b>Mıknatıs Modu:</b> Etraftaki sevapları sana çeker!<br>
+        🏮 <b>Ağır Çekim (Slow-Mo):</b> Kandil alırsan oyun yavaşlar!<br>
+        💥 <b>Sarsıntı:</b> Kötü bir şeye çarparsan ekran şiddetle sarsılır!<br>
+        🌴 <b>Hurma Bereketi:</b> Sabır Barın anında +15 artar.<br>
+        🚬 <b>Sigara Ağırlığı:</b> Uçman 3 saniye zorlaşır.<br>
+        👹 <b>Nefis Halüsinasyonu:</b> Gözlerin kararır ve sevaplar günah gibi görünür.<br><br>
+        <b>📅 30 Günlük Yolculuk:</b><br>
+        İlk 10 gün 1 dk (Tekli), sonraki 10 gün 2 dk, son 10 gün 3 dk!
+      </div>
+    </div>
+
+    <div id="btnContainer">
+      <button class="btn" id="startBtn" onclick="startGame()">Bismillah — Başla 🌙</button>
+      <button class="btn" id="restartBtn" onclick="startGame()" style="display:none">Sonraki Güne Geç 🔄</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CANVAS & RESOURCES
+// ══════════════════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = 'high';
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+const IMGS = {};
+function loadImg(key, src) {
+  const img = new Image();
+  img.onload = () => { IMGS[key] = img; };
+  img.onerror = () => { IMGS[key] = null; };
+  img.src = src;
+}
+
+loadImg('player', 'ramazan.png');
+loadImg('davulcu', 'davulcu.png');
+loadImg('kuran', 'kuran.png');
+loadImg('tesbih', 'tesbih.png');
+loadImg('dua', 'dua.png');
+loadImg('iyilik', 'iyilik.png');
+loadImg('sabir', 'sabir.png');
+loadImg('yildiz', 'yildiz.png');
+loadImg('ay', 'ay.png');
+loadImg('kalp', 'kalp.png');
+loadImg('hurma', 'hurma.png');
+loadImg('parca', 'parca.png');
+loadImg('lahmacun', 'lahmacun.png');
+loadImg('pide', 'pide.png');
+loadImg('kebap', 'kebap.png');
+loadImg('baklava', 'baklava.png');
+loadImg('hamburger', 'hamburger.png');
+loadImg('pizza', 'pizza.png');
+loadImg('su', 'su.png');
+loadImg('bira', 'bira.png');
+loadImg('sigara', 'sigara.png');
+loadImg('cikolata', 'cikolata.png');
+loadImg('patates', 'patates.png');
+loadImg('kufur', 'kufur.png');
+loadImg('lokum', 'lokum.png');
+loadImg('icecek', 'icecek.png');
+
+const GOOD_DEFS = [
+  { key:'kuran', emoji:'📖', isShield: true }, { key:'tesbih', emoji:'📿' }, { key:'dua', emoji:'🤲' },
+  { key:'iyilik', emoji:'💚' }, { key:'sabir', emoji:'⭐' }, { key:'yildiz', emoji:'✨' },
+  { key:'ay', emoji:'🌙' }, { key:'kalp', emoji:'❤️' }, { key:'hurma', emoji:'🌴', isHurma: true }, { key:'parca', emoji:'🌟' },
+  { key:'guvercin', emoji:'🕊️' }, // Kuştan kalkan alındı
+  { key:'miknatis', emoji:'🧲', isMagnet: true }, 
+  { key:'kandil', emoji:'🏮', isSlowMo: true } 
+];
+
+const BAD_DEFS = [
+  { key:'lahmacun', emoji:'🌯' }, { key:'pide', emoji:'🍞' }, { key:'kebap', emoji:'🍢' }, { key:'baklava', emoji:'🍯' },
+  { key:'hamburger', emoji:'🍔' }, { key:'pizza', emoji:'🍕' }, { key:'su', emoji:'💧' },
+  { key:'bira', emoji:'🍺' }, { key:'sigara', emoji:'🚬', isSigara: true }, { key:'cikolata', emoji:'🍫' },
+  { key:'patates', emoji:'🍟' }, { key:'kufur', emoji:'🤬' }, { key:'lokum', emoji:'🍩' }, { key:'icecek', emoji:'🧃' },
+  { key:'nefis', emoji:'👹', isNefis: true } 
+];
+
+const SABIR_NOTLARI = [
+  "Oruç, sabrın yarısıdır. (Hadis-i Şerif)",
+  "Zorluk arttığında sabretmek, imanın kemalindendir.",
+  "Gündüzün harareti, akşamın ferahlığına hazırlıktır.",
+  "Sadece yemekten değil, kötü sözden de kaçınmalısın.",
+  "Hurma ile açılan iftarın bereketi başkadır."
+];
+
+let AC = null;
+let ezanAudio = new Audio('ezan.mp3');
+let davulAudio = new Audio('davul.mp3'); 
+davulAudio.loop = true; 
+
+let isMuted = false;
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('muteBtn').textContent = isMuted ? "🔇" : "🔊";
+    if (isMuted) { davulAudio.pause(); } else { if (G.running) davulAudio.play().catch(e=>{}); }
+}
+
+function getAC() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+
+function tone(f0, f1, dur, vol=.11, type='sine') {
+  if(isMuted) return;
+  try {
+    const ac = getAC();
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = type; o.frequency.setValueAtTime(f0 || f1, ac.currentTime);
+    if(f1 && f0 !== f1) { o.frequency.exponentialRampToValueAtTime(f1, ac.currentTime + dur); }
+    g.gain.setValueAtTime(vol, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + dur);
+    o.start(); o.stop(ac.currentTime + dur);
+  } catch(e) {}
+}
+
+const sndCollect     = () => tone(440, 900, .22, .09);
+const sndHit         = () => tone(200, 70, .32, .13, 'sawtooth');
+const sndFlap        = () => tone(380, 320, .1, .04);
+const sndShieldOn    = () => tone(300, 800, 0.4, 0.1, 'sine');     
+const sndShieldBreak = () => tone(800, 100, 0.5, 0.15, 'sawtooth'); 
+const sndHeal        = () => tone(600, 1200, 0.3, 0.1, 'sine'); 
+const sndMagnet      = () => tone(500, 1000, 0.5, 0.08, 'triangle'); 
+const sndSlowMo      = () => tone(800, 200, 0.8, 0.15, 'sine'); 
+
+const sndDrum = () => {
+  try { davulAudio.currentTime = 0; davulAudio.play().catch(e => {}); } catch(e) {}
+};
+
+// ══════════════════════════════════════════════════════
+//  GAME STATE & INITIALIZATION (DÜZELTİLDİ)
+// ══════════════════════════════════════════════════════
+const GRAVITY  = 0.42;
+const LIFT_ACC = 1.05;
+const MAX_VY   = 9;
+const MIN_VY   = -8;
+
+const G = {
+  running: false, day: 1, duration: 60, elapsed: 0, score: 0, patience: 100,
+  collected: 0, avoided: 0, objects: [], particles: [], lastSpawn: 0, 
+  spawnInterval: 2600, speed: 2.2, pressing: false, combo: 0, 
+  lastDrumTime: 0, hallucinationUntil: 0, heavyUntil: 0, shield: false,
+  shake: 0, magnetUntil: 0, slowMoUntil: 0, trail: [], bgScroll: 0, 
+  cityPattern: [], 
+  player: { x: 100, y: 0, w: 150, h: 150, vy: 0, hitFlash: 0 }
+};
+
+let stars = []; let clouds = [];
+
+function initStars() {
+  stars = Array.from({length:130}, () => ({
+    x: Math.random() * W, y: Math.random() * H * .72,
+    r: Math.random() * 1.4 + .3, tw: Math.random() * Math.PI * 2, sp: Math.random() * .025 + .01
+  }));
+}
+
+function initClouds() {
+  clouds = [];
+  let currentX = W + 50;
+  for(let i=0; i<6; i++) {
+    clouds.push({
+      x: currentX, y: 50 + Math.random() * (H * 0.3),
+      w: 120 + Math.random() * 80, s: 0.3 + Math.random() * 0.5
+    });
+    currentX += 200 + Math.random() * 150;
+  }
+}
+
+// OYUN BAŞLAMADAN ŞEHİR DESENİNİ OLUŞTURUYORUZ
+function initCityPattern() {
+    G.cityPattern = [];
+    for(let i=0; i<50; i++) { G.cityPattern.push(Math.floor(Math.random() * 4)); }
+}
+
+function updateDurationByDay() {
+    if (G.day <= 10) G.duration = 60; else if (G.day <= 20) G.duration = 120; else G.duration = 180;
+}
+
+// ══════════════════════════════════════════════════════
+//  SPAWN
+// ══════════════════════════════════════════════════════
+function spawn() {
+  const t = G.elapsed / G.duration;
+  const now = performance.now();
+  if (now - G.lastSpawn < G.spawnInterval * 0.45) return;
+
+  const margin = 60; 
+  let objCount = 1;
+  if (G.day > 10) { if(t > 0.4) objCount = 2; if(G.day > 20 && t > 0.6) objCount = 3; }
+  
+  let usedY = []; 
+  for(let i=0; i<objCount; i++) {
+      const isBad = Math.random() < (0.55 + (G.day * 0.005)); 
+      const list = isBad ? BAD_DEFS : GOOD_DEFS;
+      const def = list[Math.floor(Math.random() * list.length)];
+      const fakeBadDef = BAD_DEFS[Math.floor(Math.random() * BAD_DEFS.length)];
+      
+      let newY; let safe = false; let attempts = 0;
+      while(!safe && attempts < 10) {
+          newY = margin + Math.random() * (H - margin * 4);
+          safe = true;
+          for(let u of usedY) { if(Math.abs(u - newY) < 140) { safe = false; break; } }
+          attempts++;
+      }
+      
+      if(safe) {
+          usedY.push(newY);
+          const offsetX = W + 100 + (Math.random() * 200 * i);
+          G.objects.push({ 
+            x: offsetX, y: newY, key: def.key, emoji: def.emoji, 
+            bad: isBad, isNefis: def.isNefis || false, isSigara: def.isSigara || false,
+            isHurma: def.isHurma || false, isShieldItem: def.isShield || false,
+            isMagnet: def.isMagnet || false, isSlowMo: def.isSlowMo || false,
+            w: 85, h: 85, _done: false, fakeKey: fakeBadDef.key, fakeEmoji: fakeBadDef.emoji
+          });
+      }
+  }
+  G.lastSpawn = now;
+}
+
+// ══════════════════════════════════════════════════════
+//  GÖKYÜZÜ VE ŞEHİR SİLÜETİ (GARANTİLİ DÖNGÜ)
+// ══════════════════════════════════════════════════════
+function skyColors(t) {
+  const mix = (A, B, f) => A.map((v, i) => Math.round(v + (B[i] - v) * f));
+  const SAHUR = { top:[10,10,35], bot:[20,20,60] }, GUN = { top:[100,180,255], bot:[200,230,255] }, AKSAM = { top:[255,100,50], bot:[100,40,20] }, IFTAR = { top:[15,10,30], bot:[5,5,20] };       
+
+  let top, bot, label;
+  if(t < 0.3) {
+    const f = t / 0.3; top = mix(SAHUR.top, GUN.top, f); bot = mix(SAHUR.bot, GUN.bot, f); label = "☾ SAHUR VAKTİ";
+  } else if(t < 0.7) {
+    const f = (t - 0.3) / 0.4; top = mix(GUN.top, AKSAM.top, f); bot = mix(GUN.bot, AKSAM.bot, f); label = "☼ GÜNDÜZ VAKTİ";
+  } else {
+    const f = (t - 0.7) / 0.3; top = mix(AKSAM.top, IFTAR.top, f); bot = mix(AKSAM.bot, IFTAR.bot, f); label = "🌅 İFTARA DOĞRU";
+  }
+  return { top: `rgb(${top[0]},${top[1]},${top[2]})`, bot: `rgb(${bot[0]},${bot[1]},${bot[2]})`, label };
+}
+
+function drawBuildingBlock(ctx, x, baseH, w, type) {
+    const horizon = baseH * 0.85; 
+
+    ctx.fillStyle = "#04040c"; 
+    ctx.strokeStyle = "rgba(255, 230, 150, 0.25)"; 
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(x, baseH);
+    
+    if (type === 0) { 
+        ctx.lineTo(x, horizon); ctx.lineTo(x + w*0.2, horizon); ctx.arc(x + w*0.5, horizon, w*0.2, Math.PI, 0); 
+        ctx.lineTo(x + w*0.8, horizon); ctx.lineTo(x + w*0.85, horizon - w*0.4); ctx.lineTo(x + w*0.88, horizon - w*0.6); 
+        ctx.lineTo(x + w*0.91, horizon - w*0.4); ctx.lineTo(x + w*0.95, horizon); ctx.lineTo(x + w, horizon);
+    } else if (type === 1) { 
+        const roofH = horizon - w*0.4;
+        ctx.lineTo(x + w*0.1, horizon); ctx.lineTo(x + w*0.1, roofH); ctx.lineTo(x + w*0.3, roofH); ctx.lineTo(x + w*0.3, roofH - 20); ctx.lineTo(x + w*0.35, roofH - 20); ctx.lineTo(x + w*0.35, roofH); 
+        ctx.lineTo(x + w*0.9, roofH); ctx.lineTo(x + w*0.9, horizon);
+    } else if (type === 2) { 
+        const roofMid = horizon + 15;
+        ctx.lineTo(x, roofMid); ctx.lineTo(x + w*0.25, horizon - 15); ctx.lineTo(x + w*0.5, roofMid);
+        ctx.lineTo(x + w*0.75, horizon - 20); ctx.lineTo(x + w, roofMid);
+    } else { 
+         const blockRoof = horizon - w*0.2;
+         ctx.lineTo(x + w*0.05, horizon); ctx.lineTo(x + w*0.05, blockRoof); ctx.lineTo(x + w*0.6, blockRoof); ctx.lineTo(x + w*0.6, blockRoof - 15); ctx.lineTo(x + w*0.8, blockRoof - 15); ctx.lineTo(x + w*0.8, blockRoof); 
+         ctx.lineTo(x + w*0.95, blockRoof); ctx.lineTo(x + w*0.95, horizon);
+    }
+    
+    ctx.lineTo(x + w, baseH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke(); 
+
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(255, 230, 150, 0.15)";
+    if(type === 0) {
+        ctx.moveTo(x + w*0.35, horizon + 20); ctx.lineTo(x + w*0.45, horizon + 20); ctx.moveTo(x + w*0.55, horizon + 20); ctx.lineTo(x + w*0.65, horizon + 20);
+    } else if(type === 1) {
+         const roofH = horizon - w*0.4;
+         for(let wy = roofH + 20; wy < baseH - 10; wy += 25) { ctx.moveTo(x + w*0.2, wy); ctx.lineTo(x + w*0.4, wy); ctx.moveTo(x + w*0.6, wy); ctx.lineTo(x + w*0.8, wy); }
+    } else if(type === 2) {
+        const roofMid = horizon + 15;
+        ctx.moveTo(x + w*0.15, roofMid + 30); ctx.lineTo(x + w*0.35, roofMid + 30); ctx.moveTo(x + w*0.65, roofMid + 30); ctx.lineTo(x + w*0.85, roofMid + 30);
+    } else if(type === 3) {
+         const blockRoof = horizon - w*0.2;
+         for(let wy = blockRoof + 20; wy < baseH - 10; wy += 30) { ctx.moveTo(x + w*0.15, wy); ctx.lineTo(x + w*0.4, wy); ctx.moveTo(x + w*0.6, wy); ctx.lineTo(x + w*0.85, wy); }
+    }
+    ctx.stroke();
+}
+
+function drawBG(t) {
+  const sc = skyColors(t);
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, sc.top); g.addColorStop(1, sc.bot);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  const sa = t < 0.2 ? 1 : (t > 0.8 ? (t - 0.8) / 0.2 : 0);
+  if(sa > 0) { ctx.save(); ctx.globalAlpha = sa; stars.forEach(s => { s.tw += s.sp; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill(); }); ctx.restore(); }
+
+  if(t > 0.15 && t < 0.85) {
+    ctx.save(); const sunF = (t - 0.15) / 0.7; const sunX = W * sunF; const sunY = H * 0.4 - Math.sin(sunF * Math.PI) * (H * 0.3); 
+    ctx.globalAlpha = Math.sin(sunF * Math.PI); ctx.fillStyle = "#ffdb58"; ctx.shadowColor = "#fff"; ctx.shadowBlur = 40; ctx.beginPath(); ctx.arc(sunX, sunY, 45, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+
+  if (t > 0.15 && t < 0.85) {
+    ctx.save(); let cloudAlpha = 1; if (t < 0.25) cloudAlpha = (t - 0.15) * 10; if (t > 0.75) cloudAlpha = (0.85 - t) * 10;
+    ctx.globalAlpha = Math.max(0, Math.min(1, cloudAlpha)) * 0.85; ctx.fillStyle = "#ffffff";
+    clouds.forEach(c => {
+      c.x -= c.s * (G.slowMoUntil > G.elapsed ? 0.3 : 1); if (c.x < -c.w) { c.x = W + c.w; c.y = 50 + Math.random() * (H * 0.3); }
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.w * 0.3, 0, Math.PI * 2); ctx.arc(c.x + c.w * 0.3, c.y - c.w * 0.15, c.w * 0.4, 0, Math.PI * 2); ctx.arc(c.x + c.w * 0.6, c.y, c.w * 0.35, 0, Math.PI * 2); ctx.rect(c.x - c.w * 0.1, c.y - c.w * 0.1, c.w * 0.8, c.w * 0.4); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // ══════════════════════════════════════════════════════
+  // ÇİFT SET RENDER (Double-Buffer) İLE GARANTİLİ SONSUZ ŞEHİR
+  // ══════════════════════════════════════════════════════
+  ctx.save();
+  ctx.globalAlpha = 1.0; 
+  const timeMod = G.slowMoUntil > G.elapsed ? 0.35 : 1;
+  const buildingWidth = 160; 
+  const totalCityWidth = G.cityPattern.length * buildingWidth; 
+  
+  if (totalCityWidth > 0) { // NaN hatasını önleyen güvenlik kilidi
+      if (G.running) G.bgScroll -= G.speed * 0.25 * timeMod;
+      
+      G.bgScroll = G.bgScroll % totalCityWidth;
+      
+      let startX = G.bgScroll;
+      if (startX > 0) startX -= totalCityWidth;
+
+      // Ekranı doldurmayı garanti altına almak için yan yana 2 tam set (toplam 100 bina) çiziyoruz.
+      for (let loop = 0; loop < 2; loop++) {
+          let currentX = startX + (loop * totalCityWidth);
+          for (let i = 0; i < G.cityPattern.length; i++) { 
+               // Sadece ekran sınırlarına girenleri çizerek cihazı yormasını engelliyoruz
+               if (currentX + buildingWidth > -100 && currentX < W + 100) {
+                   drawBuildingBlock(ctx, currentX, H, buildingWidth, G.cityPattern[i]);
+               }
+               currentX += buildingWidth;
+          }
+      }
+  }
+  ctx.restore();
+
+  if (t < 0.04) { 
+      ctx.save(); const drumX = (t / 0.04) * W; const bounce = Math.abs(Math.sin(G.elapsed * 10)) * 15; 
+      const drumImg = IMGS['davulcu']; if (drumImg) { ctx.drawImage(drumImg, drumX, H * 0.92 - bounce - 120, 120, 120); } 
+      ctx.restore();
+  }
+
+  return sc.label;
+}
+
+// ══════════════════════════════════════════════════════
+//  DRAW FUNCTIONS
+// ══════════════════════════════════════════════════════
+function drawPlayer() {
+  const p = G.player;
+  const tilt = Math.max(-.45, Math.min(.38, p.vy * .065));
+  
+  if (G.running && Math.random() > 0.3) {
+      G.trail.push({ x: p.x - p.w*0.2, y: p.y, life: 1, size: Math.random() * 5 + 2 });
+      if (G.trail.length > 20) G.trail.shift();
+  }
+
+  ctx.save();
+  G.trail.forEach((tr) => {
+      tr.life -= 0.05; tr.x -= G.speed * 0.5;
+      if (tr.life > 0) {
+          ctx.globalAlpha = tr.life * 0.5; ctx.fillStyle = G.magnetUntil > G.elapsed ? '#a855f7' : '#fde68a';
+          ctx.beginPath(); ctx.arc(tr.x, tr.y, tr.size * tr.life, 0, Math.PI * 2); ctx.fill();
+      }
+  });
+  G.trail = G.trail.filter(tr => tr.life > 0);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(p.x, p.y); 
+
+  if (G.magnetUntil > G.elapsed) {
+      ctx.save(); const pulse = Math.sin(performance.now() * 0.01) * 10; ctx.shadowColor = '#a855f7'; ctx.shadowBlur = 30 + pulse; ctx.strokeStyle = 'rgba(168, 85, 247, 0.6)'; ctx.lineWidth = 3; ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.arc(0, 0, p.w + pulse, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
+
+  if (G.shield) {
+      ctx.save(); const pulse = Math.sin(performance.now() * 0.005) * 8; ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 25 + pulse; ctx.strokeStyle = 'rgba(0, 255, 255, 0.9)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, (p.w * 0.45) + pulse/2, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = 'rgba(0, 255, 255, 0.2)'; ctx.fill(); ctx.restore();
+  }
+
+  ctx.rotate(tilt);
+  if (p.hitFlash > 0) { p.hitFlash--; ctx.shadowColor = '#ff2222'; ctx.shadowBlur = 20; }
+  const img = IMGS['player'];
+  if (img) { ctx.drawImage(img, -p.w / 2, -p.h / 2, p.w, p.h); } 
+  else { ctx.font = "80px serif"; ctx.textAlign = "center"; ctx.fillText("🕊️", 0, 30); }
+  ctx.restore();
+}
+
+function drawObjects() {
+  G.objects.forEach(o => {
+    if (o._done) return;
+    ctx.save();
+    let currentKey = o.key; let currentEmoji = o.emoji;
+    
+    if (!o.bad && G.hallucinationUntil > G.elapsed) {
+        if (Math.floor(G.elapsed * 5) % 2 === 0) {
+            currentKey = o.fakeKey; currentEmoji = o.fakeEmoji;
+            ctx.shadowColor = 'rgba(255, 0, 0, 0.8)'; ctx.shadowBlur = 20;
+        }
+    } else {
+        if (!o.bad) {
+            ctx.shadowColor = o.isMagnet ? '#a855f7' : (o.isSlowMo ? '#fbbf24' : 'rgba(253, 230, 138, 0.5)');
+            ctx.shadowBlur = 15;
+        } else { ctx.shadowColor = 'rgba(239, 68, 68, 0.4)'; ctx.shadowBlur = 10; }
+    }
+    
+    const img = IMGS[currentKey];
+    if (img) { ctx.drawImage(img, o.x - o.w / 2, o.y - o.h / 2, o.w, o.h); } 
+    else { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = "bold 65px serif"; ctx.fillText(currentEmoji, o.x, o.y); }
+    ctx.restore();
+  });
+}
+
+function spawnFX(x, y, col, n = 10, type = 'normal') {
+  for(let i = 0; i < n; i++){ 
+    const a = Math.PI * 2 * i / n; 
+    const s = (type === 'shard') ? 3 + Math.random() * 5 : 1.5 + Math.random() * 2; 
+    G.particles.push({ 
+        x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, 
+        r: (type === 'shard') ? 6 + Math.random() * 5 : 3 + Math.random() * 4, 
+        life: 1, col: col, type: type, rot: Math.random() * Math.PI, vrot: (Math.random() - 0.5) * 0.2 
+    }); 
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  GAMEPLAY MECHANICS
+// ══════════════════════════════════════════════════════
+function applyShake() {
+    if (G.shake > 0) {
+        const dx = (Math.random() - 0.5) * G.shake; const dy = (Math.random() - 0.5) * G.shake;
+        ctx.translate(dx, dy); G.shake *= 0.8; if (G.shake < 0.5) G.shake = 0;
+    }
+}
+
+function collide() {
+  const p = G.player; const cr = p.w * 0.32;
+  G.objects.forEach(o => {
+    if (o._done) return;
+    const dx = p.x - o.x; const dy = p.y - o.y; const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (G.magnetUntil > G.elapsed && !o.bad) { if (dist < p.w * 2.5) { o.x += dx * 0.08; o.y += dy * 0.08; } }
+
+    if (dist < cr + o.w * 0.42) {
+      o._done = true;
+      if (o.bad) {
+        if (G.shield) { G.shield = false; sndShieldBreak(); spawnFX(p.x, p.y, '#00ffff', 25, 'shard'); floatText(o.x - 20, o.y - 50, 'KALKAN KIRILDI! 💥', '#00ffff'); } 
+        else {
+            G.combo = 0; G.patience = Math.max(0, G.patience - 20); G.score = Math.max(0, G.score - 5); p.hitFlash = 15; G.shake = 20; 
+            if(o.isNefis) { G.hallucinationUntil = G.elapsed + 5; document.getElementById('hallucinationVignette').style.opacity = '1'; setTimeout(() => { if(G.hallucinationUntil <= G.elapsed) document.getElementById('hallucinationVignette').style.opacity = '0'; }, 5000); }
+            if(o.isSigara) { G.heavyUntil = G.elapsed + 3; floatText(o.x - 20, o.y - 30, 'AĞIRLAŞTIN 💨', '#a3a3a3'); }
+            const rf = document.getElementById('redFlash'); rf.style.opacity = '1'; setTimeout(() => rf.style.opacity = '0', 200); spawnFX(o.x, o.y, '#ff4444'); floatText(o.x - 20, o.y - 50, '-5 💔', '#ff6677'); sndHit();
+        }
+      } else {
+        if (o.isShieldItem) { G.shield = true; sndShieldOn(); floatText(o.x - 20, o.y - 50, 'MANEVİ KALKAN 🛡️', '#00ffff'); spawnFX(o.x, o.y, '#00ffff', 20); } 
+        else if (o.isHurma) { G.patience = Math.min(100, G.patience + 15); G.score += 20; sndHeal(); spawnFX(o.x, o.y, '#22c55e', 15); floatText(o.x - 20, o.y - 50, 'ŞİFA +15 🌴', '#4ade80'); } 
+        else if (o.isMagnet) { G.magnetUntil = G.elapsed + 5; sndMagnet(); spawnFX(o.x, o.y, '#a855f7', 20); floatText(o.x - 20, o.y - 50, 'MIKNATIS GÜCÜ 🧲', '#c084fc'); } 
+        else if (o.isSlowMo) { G.slowMoUntil = G.elapsed + 4; sndSlowMo(); spawnFX(o.x, o.y, '#fbbf24', 20); floatText(o.x - 20, o.y - 50, 'AĞIR ÇEKİM 🏮', '#fcd34d'); document.getElementById('slowMoVignette').style.opacity = '1'; setTimeout(() => { if(G.slowMoUntil <= G.elapsed) document.getElementById('slowMoVignette').style.opacity = '0'; }, 4000); } 
+        else { G.combo++; let bonus = 15; if (G.combo >= 3) bonus += (G.combo - 2) * 5; G.score += bonus; spawnFX(o.x, o.y, '#fbbf24'); floatText(o.x - 20, o.y - 50, `+${bonus} ✨`, '#fde68a'); sndCollect(); }
+        G.collected++; 
+      }
+      updateHUD();
+    }
+  });
+}
+
+function floatText(x, y, txt, col){
+  const el = document.createElement('div'); el.className = 'ft'; el.textContent = txt; el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.color = col; document.getElementById('floats').appendChild(el); setTimeout(() => el.remove(), 1200);
+}
+
+function updateHUD(){
+  const rem = Math.max(0, G.duration - G.elapsed); const m = Math.floor(rem / 60); const s = Math.floor(rem % 60); 
+  document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2, '0')}`; document.getElementById('score').textContent = G.score; document.getElementById('patienceFill').style.width = G.patience + '%'; document.getElementById('dayCounter').textContent = `GÜN: ${G.day}`;
+  const zorluk = Math.min(100, (G.elapsed / G.duration) * 100); document.getElementById('speedFill').style.width = zorluk + '%';
+  if(G.hallucinationUntil <= G.elapsed) document.getElementById('hallucinationVignette').style.opacity = '0';
+  if(G.slowMoUntil <= G.elapsed) document.getElementById('slowMoVignette').style.opacity = '0';
+}
+
+let raf = null, lastT = 0;
+
+function loop(ts){
+  if(!G.running) return;
+  const dt = Math.min((ts - lastT) / 1000, .05); lastT = ts; G.elapsed += dt; const t = G.elapsed / G.duration;
+  
+  ctx.save(); applyShake();
+  if (t < 0.04 && ts - G.lastDrumTime > 800) { sndDrum(); G.lastDrumTime = ts; }
+  document.getElementById('timerSub').textContent = drawBG(t);
+
+  const timeMod = G.slowMoUntil > G.elapsed ? 0.35 : 1;
+  G.speed = ((2.8 + (G.day * 0.2)) + Math.pow(t, 1.4) * 15) * timeMod; 
+  G.spawnInterval = Math.max(450, (2600 - (G.day * 50)) - (t * 2200)) / timeMod; 
+  if(ts - G.lastSpawn > G.spawnInterval) spawn();
+
+  const p = G.player;
+  let currentLift = LIFT_ACC; let currentGravity = GRAVITY;
+  if(G.heavyUntil > G.elapsed) { currentLift = 0.6; currentGravity = 0.65; }
+  currentLift *= timeMod > 0.5 ? 1 : 0.6; currentGravity *= timeMod > 0.5 ? 1 : 0.6;
+  p.vy = G.pressing ? Math.max(MIN_VY, p.vy - currentLift) : Math.min(MAX_VY, p.vy + currentGravity); p.y += p.vy;
+
+  if (p.y > H - 120) { G.patience -= 0.12 * timeMod; document.getElementById('groundWarning').style.opacity = "1"; } else { document.getElementById('groundWarning').style.opacity = "0"; }
+  if(p.y < 50) { p.y = 50; p.vy = 0; } if(p.y > H - 50) { p.y = H - 50; p.vy = 0; }
+  
+  drawPlayer();
+  G.objects = G.objects.filter(o => { o.x -= G.speed; return !o._done && o.x > -100; }); drawObjects(); collide();
+  
+  G.particles = G.particles.filter(p => { 
+    p.x += p.vx * timeMod; p.y += p.vy * timeMod; 
+    if (p.type === 'shard') { p.vy += 0.2 * timeMod; p.rot += p.vrot * timeMod; p.life -= 0.02 * timeMod; } else { p.life -= 0.04 * timeMod; }
+    return p.life > 0; 
+  });
+  
+  G.particles.forEach(p => {
+      ctx.save(); ctx.globalAlpha = p.life; ctx.fillStyle = p.col;
+      if(p.type === 'shard'){ ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r); } 
+      else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); }
+      ctx.restore();
+  });
+
+  ctx.restore(); updateHUD();
+  if(G.patience <= 0) endGame(false); else if(G.elapsed >= G.duration) endGame(true); else raf = requestAnimationFrame(loop);
+}
+
+function startGame(){
+  getAC(); ezanAudio.pause(); ezanAudio.currentTime = 0; if(!isMuted) davulAudio.play().catch(e=>{});
+  updateDurationByDay();
+  G.running = true; G.elapsed = 0; G.patience = 100; G.objects = []; G.particles = []; G.combo = 0; 
+  G.shield = false; G.hallucinationUntil = 0; G.heavyUntil = 0; G.shake = 0; G.magnetUntil = 0; G.slowMoUntil = 0;
+  G.trail = []; G.bgScroll = 0; G.player.y = H / 2; G.player.vy = 0;
+  document.getElementById('overlay').style.display = 'none'; document.getElementById('speedBar').style.display = 'flex'; 
+  document.getElementById('touchHint').style.display = 'block'; document.getElementById('hallucinationVignette').style.opacity = '0';
+  document.getElementById('slowMoVignette').style.opacity = '0';
+  
+  lastT = performance.now(); raf = requestAnimationFrame(loop);
+}
+
+function endGame(won){
+  G.running = false; davulAudio.pause();
+  if(won) { ezanAudio.play(); document.getElementById('overlayIcon').textContent = "🌅"; document.getElementById('overlayTitle').textContent = G.day + ". GÜN TAMAMLANDI!"; document.getElementById('overlaySub').textContent = "Sabrın meyvesini aldın. Yarın daha zor olacak!"; G.day++; } 
+  else { document.getElementById('overlayIcon').textContent = "💔"; document.getElementById('overlayTitle').textContent = "SABIR TÜKENDİ"; document.getElementById('overlaySub').textContent = "Nefsine yenik düştün. 1. günden tekrar niyet et!"; G.day = 1; G.score = 0; }
+  
+  document.getElementById('fmText').textContent = SABIR_NOTLARI[Math.floor(Math.random() * SABIR_NOTLARI.length)];
+  document.getElementById('stScore').textContent = G.score; document.getElementById('stDay').textContent = G.day - (won ? 1 : 0); document.getElementById('stCol').textContent = G.collected;
+  document.getElementById('finalMessage').style.display = 'block'; document.getElementById('overlayStats').style.display = 'flex'; 
+  document.getElementById('startBtn').style.display = 'none'; document.getElementById('restartBtn').style.display = 'inline-block'; document.getElementById('overlay').style.display = 'flex';
+}
+
+function onPress(e){ e.preventDefault(); if(G.running) { G.pressing = true; sndFlap(); } }
+function onRelease(e){ e.preventDefault(); G.pressing = false; }
+canvas.addEventListener('touchstart', onPress, {passive:false}); canvas.addEventListener('touchend', onRelease); 
+canvas.addEventListener('mousedown', onPress); window.addEventListener('mouseup', onRelease);
+document.addEventListener('keydown', e => { if(e.code === 'Space') { e.preventDefault(); G.pressing = true; } }); 
+document.addEventListener('keyup', e => { if(e.code === 'Space') G.pressing = false; });
+
+// ══════════════════════════════════════════════════════
+//  KİLİT NOKTA: BAŞLANGIÇTA ÇALIŞTIRMA GARANTİSİ
+// ══════════════════════════════════════════════════════
+window.onload = () => {
+    resize();
+    initStars();
+    initClouds();
+    initCityPattern();
+    drawBG(0); 
+};
+
+</script>
+</body>
+</html>
