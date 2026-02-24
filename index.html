@@ -192,6 +192,9 @@ function loadImg(key, src) {
 
 loadImg('player', 'ramazan.png');
 loadImg('davulcu', 'davulcu.png');
+// YENİ ÖZELLİK: Eğer sehir.png yüklersen o görünür!
+loadImg('sehir', 'sehir.png'); 
+
 loadImg('kuran', 'kuran.png');
 loadImg('tesbih', 'tesbih.png');
 loadImg('dua', 'dua.png');
@@ -221,7 +224,7 @@ const GOOD_DEFS = [
   { key:'kuran', emoji:'📖', isShield: true }, { key:'tesbih', emoji:'📿' }, { key:'dua', emoji:'🤲' },
   { key:'iyilik', emoji:'💚' }, { key:'sabir', emoji:'⭐' }, { key:'yildiz', emoji:'✨' },
   { key:'ay', emoji:'🌙' }, { key:'kalp', emoji:'❤️' }, { key:'hurma', emoji:'🌴', isHurma: true }, { key:'parca', emoji:'🌟' },
-  { key:'guvercin', emoji:'🕊️' }, // Kuştan kalkan alındı
+  { key:'guvercin', emoji:'🕊️' }, 
   { key:'miknatis', emoji:'🧲', isMagnet: true }, 
   { key:'kandil', emoji:'🏮', isSlowMo: true } 
 ];
@@ -289,7 +292,7 @@ const sndDrum = () => {
 };
 
 // ══════════════════════════════════════════════════════
-//  GAME STATE & INITIALIZATION (DÜZELTİLDİ)
+//  GAME STATE & LOCAL STORAGE
 // ══════════════════════════════════════════════════════
 const GRAVITY  = 0.42;
 const LIFT_ACC = 1.05;
@@ -305,6 +308,18 @@ const G = {
   cityPattern: [], 
   player: { x: 100, y: 0, w: 150, h: 150, vy: 0, hitFlash: 0 }
 };
+
+function saveProgress() {
+    localStorage.setItem('ramazanDay', G.day);
+    localStorage.setItem('ramazanScore', G.score);
+}
+
+function loadProgress() {
+    const savedDay = localStorage.getItem('ramazanDay');
+    const savedScore = localStorage.getItem('ramazanScore');
+    if(savedDay !== null) G.day = parseInt(savedDay);
+    if(savedScore !== null) G.score = parseInt(savedScore);
+}
 
 let stars = []; let clouds = [];
 
@@ -327,7 +342,6 @@ function initClouds() {
   }
 }
 
-// OYUN BAŞLAMADAN ŞEHİR DESENİNİ OLUŞTURUYORUZ
 function initCityPattern() {
     G.cityPattern = [];
     for(let i=0; i<50; i++) { G.cityPattern.push(Math.floor(Math.random() * 4)); }
@@ -380,7 +394,7 @@ function spawn() {
 }
 
 // ══════════════════════════════════════════════════════
-//  GÖKYÜZÜ VE ŞEHİR SİLÜETİ (GARANTİLİ DÖNGÜ)
+//  GÖKYÜZÜ VE ŞEHİR SİLÜETİ (RESİM/KOD İKİLİ DESTEĞİ)
 // ══════════════════════════════════════════════════════
 function skyColors(t) {
   const mix = (A, B, f) => A.map((v, i) => Math.round(v + (B[i] - v) * f));
@@ -398,6 +412,7 @@ function skyColors(t) {
 }
 
 function drawBuildingBlock(ctx, x, baseH, w, type) {
+    const ground = baseH;
     const horizon = baseH * 0.85; 
 
     ctx.fillStyle = "#04040c"; 
@@ -405,7 +420,7 @@ function drawBuildingBlock(ctx, x, baseH, w, type) {
     ctx.lineWidth = 1.5;
 
     ctx.beginPath();
-    ctx.moveTo(x, baseH);
+    ctx.moveTo(x, ground);
     
     if (type === 0) { 
         ctx.lineTo(x, horizon); ctx.lineTo(x + w*0.2, horizon); ctx.arc(x + w*0.5, horizon, w*0.2, Math.PI, 0); 
@@ -425,7 +440,7 @@ function drawBuildingBlock(ctx, x, baseH, w, type) {
          ctx.lineTo(x + w*0.95, blockRoof); ctx.lineTo(x + w*0.95, horizon);
     }
     
-    ctx.lineTo(x + w, baseH);
+    ctx.lineTo(x + w, ground);
     ctx.closePath();
     ctx.fill();
     ctx.stroke(); 
@@ -436,13 +451,13 @@ function drawBuildingBlock(ctx, x, baseH, w, type) {
         ctx.moveTo(x + w*0.35, horizon + 20); ctx.lineTo(x + w*0.45, horizon + 20); ctx.moveTo(x + w*0.55, horizon + 20); ctx.lineTo(x + w*0.65, horizon + 20);
     } else if(type === 1) {
          const roofH = horizon - w*0.4;
-         for(let wy = roofH + 20; wy < baseH - 10; wy += 25) { ctx.moveTo(x + w*0.2, wy); ctx.lineTo(x + w*0.4, wy); ctx.moveTo(x + w*0.6, wy); ctx.lineTo(x + w*0.8, wy); }
+         for(let wy = roofH + 20; wy < ground - 10; wy += 25) { ctx.moveTo(x + w*0.2, wy); ctx.lineTo(x + w*0.4, wy); ctx.moveTo(x + w*0.6, wy); ctx.lineTo(x + w*0.8, wy); }
     } else if(type === 2) {
         const roofMid = horizon + 15;
         ctx.moveTo(x + w*0.15, roofMid + 30); ctx.lineTo(x + w*0.35, roofMid + 30); ctx.moveTo(x + w*0.65, roofMid + 30); ctx.lineTo(x + w*0.85, roofMid + 30);
     } else if(type === 3) {
          const blockRoof = horizon - w*0.2;
-         for(let wy = blockRoof + 20; wy < baseH - 10; wy += 30) { ctx.moveTo(x + w*0.15, wy); ctx.lineTo(x + w*0.4, wy); ctx.moveTo(x + w*0.6, wy); ctx.lineTo(x + w*0.85, wy); }
+         for(let wy = blockRoof + 20; wy < ground - 10; wy += 30) { ctx.moveTo(x + w*0.15, wy); ctx.lineTo(x + w*0.4, wy); ctx.moveTo(x + w*0.6, wy); ctx.lineTo(x + w*0.85, wy); }
     }
     ctx.stroke();
 }
@@ -470,32 +485,47 @@ function drawBG(t) {
     ctx.restore();
   }
 
-  // ══════════════════════════════════════════════════════
-  // ÇİFT SET RENDER (Double-Buffer) İLE GARANTİLİ SONSUZ ŞEHİR
-  // ══════════════════════════════════════════════════════
   ctx.save();
   ctx.globalAlpha = 1.0; 
   const timeMod = G.slowMoUntil > G.elapsed ? 0.35 : 1;
-  const buildingWidth = 160; 
-  const totalCityWidth = G.cityPattern.length * buildingWidth; 
   
-  if (totalCityWidth > 0) { // NaN hatasını önleyen güvenlik kilidi
+  // ÖNCELİK: Kullanıcı "sehir.png" yüklediyse onu çiz, yoksa kodlu şehri çiz
+  if (IMGS['sehir']) {
+      const cityImg = IMGS['sehir'];
+      const cityH = H * 0.8; 
+      const cityW = cityImg.width * (cityH / cityImg.height); 
+      
       if (G.running) G.bgScroll -= G.speed * 0.25 * timeMod;
       
-      G.bgScroll = G.bgScroll % totalCityWidth;
+      let offset = G.bgScroll % cityW;
+      if (offset > 0) offset -= cityW;
       
-      let startX = G.bgScroll;
-      if (startX > 0) startX -= totalCityWidth;
+      let currentX = offset - cityW;
+      const imgsNeeded = Math.ceil(W / cityW) + 2;
+      
+      for (let i = 0; i < imgsNeeded; i++) {
+          ctx.drawImage(cityImg, currentX, H - cityH, cityW, cityH);
+          currentX += cityW;
+      }
+  } else {
+      const buildingWidth = 160; 
+      const totalCityWidth = G.cityPattern.length * buildingWidth; 
+      
+      if (totalCityWidth > 0) {
+          if (G.running) G.bgScroll -= G.speed * 0.25 * timeMod;
+          G.bgScroll = G.bgScroll % totalCityWidth;
+          
+          let startX = G.bgScroll;
+          if (startX > 0) startX -= totalCityWidth;
 
-      // Ekranı doldurmayı garanti altına almak için yan yana 2 tam set (toplam 100 bina) çiziyoruz.
-      for (let loop = 0; loop < 2; loop++) {
-          let currentX = startX + (loop * totalCityWidth);
-          for (let i = 0; i < G.cityPattern.length; i++) { 
-               // Sadece ekran sınırlarına girenleri çizerek cihazı yormasını engelliyoruz
-               if (currentX + buildingWidth > -100 && currentX < W + 100) {
-                   drawBuildingBlock(ctx, currentX, H, buildingWidth, G.cityPattern[i]);
-               }
-               currentX += buildingWidth;
+          for (let loop = 0; loop < 2; loop++) {
+              let currentX = startX + (loop * totalCityWidth);
+              for (let i = 0; i < G.cityPattern.length; i++) { 
+                   if (currentX + buildingWidth > -100 && currentX < W + 100) {
+                       drawBuildingBlock(ctx, currentX, H, buildingWidth, G.cityPattern[i]);
+                   }
+                   currentX += buildingWidth;
+              }
           }
       }
   }
@@ -653,8 +683,10 @@ function loop(ts){
   document.getElementById('timerSub').textContent = drawBG(t);
 
   const timeMod = G.slowMoUntil > G.elapsed ? 0.35 : 1;
-  G.speed = ((2.8 + (G.day * 0.2)) + Math.pow(t, 1.4) * 15) * timeMod; 
-  G.spawnInterval = Math.max(450, (2600 - (G.day * 50)) - (t * 2200)) / timeMod; 
+  // HIZ EĞRİSİ DENGELENDİ
+  G.speed = ((3.0 + (G.day * 0.15)) + Math.pow(t, 1.1) * 7) * timeMod; 
+  G.spawnInterval = Math.max(550, (2600 - (G.day * 40)) - (t * 1200)) / timeMod; 
+  
   if(ts - G.lastSpawn > G.spawnInterval) spawn();
 
   const p = G.player;
@@ -692,6 +724,7 @@ function startGame(){
   G.running = true; G.elapsed = 0; G.patience = 100; G.objects = []; G.particles = []; G.combo = 0; 
   G.shield = false; G.hallucinationUntil = 0; G.heavyUntil = 0; G.shake = 0; G.magnetUntil = 0; G.slowMoUntil = 0;
   G.trail = []; G.bgScroll = 0; G.player.y = H / 2; G.player.vy = 0;
+  
   document.getElementById('overlay').style.display = 'none'; document.getElementById('speedBar').style.display = 'flex'; 
   document.getElementById('touchHint').style.display = 'block'; document.getElementById('hallucinationVignette').style.opacity = '0';
   document.getElementById('slowMoVignette').style.opacity = '0';
@@ -701,13 +734,32 @@ function startGame(){
 
 function endGame(won){
   G.running = false; davulAudio.pause();
-  if(won) { ezanAudio.play(); document.getElementById('overlayIcon').textContent = "🌅"; document.getElementById('overlayTitle').textContent = G.day + ". GÜN TAMAMLANDI!"; document.getElementById('overlaySub').textContent = "Sabrın meyvesini aldın. Yarın daha zor olacak!"; G.day++; } 
-  else { document.getElementById('overlayIcon').textContent = "💔"; document.getElementById('overlayTitle').textContent = "SABIR TÜKENDİ"; document.getElementById('overlaySub').textContent = "Nefsine yenik düştün. 1. günden tekrar niyet et!"; G.day = 1; G.score = 0; }
+  if(won) { 
+      ezanAudio.play(); 
+      document.getElementById('overlayIcon').textContent = "🌅"; 
+      document.getElementById('overlayTitle').textContent = G.day + ". GÜN TAMAMLANDI!"; 
+      document.getElementById('overlaySub').textContent = "Sabrın meyvesini aldın. Yarın daha zor olacak!"; 
+      G.day++; 
+  } 
+  else { 
+      document.getElementById('overlayIcon').textContent = "💔"; 
+      document.getElementById('overlayTitle').textContent = "SABIR TÜKENDİ"; 
+      document.getElementById('overlaySub').textContent = "Nefsine yenik düştün. 1. günden tekrar niyet et!"; 
+      G.day = 1; 
+      G.score = 0; 
+  }
+  
+  saveProgress();
   
   document.getElementById('fmText').textContent = SABIR_NOTLARI[Math.floor(Math.random() * SABIR_NOTLARI.length)];
   document.getElementById('stScore').textContent = G.score; document.getElementById('stDay').textContent = G.day - (won ? 1 : 0); document.getElementById('stCol').textContent = G.collected;
   document.getElementById('finalMessage').style.display = 'block'; document.getElementById('overlayStats').style.display = 'flex'; 
-  document.getElementById('startBtn').style.display = 'none'; document.getElementById('restartBtn').style.display = 'inline-block'; document.getElementById('overlay').style.display = 'flex';
+  document.getElementById('startBtn').style.display = 'none'; document.getElementById('restartBtn').style.display = 'inline-block'; 
+  
+  if (G.day > 1) { document.getElementById('restartBtn').innerHTML = `Kaldığın Yerden Devam Et (Gün: ${G.day}) 🔄`; } 
+  else { document.getElementById('restartBtn').innerHTML = `Tekrar Başla 🔄`; }
+  
+  document.getElementById('overlay').style.display = 'flex';
 }
 
 function onPress(e){ e.preventDefault(); if(G.running) { G.pressing = true; sndFlap(); } }
@@ -718,14 +770,25 @@ document.addEventListener('keydown', e => { if(e.code === 'Space') { e.preventDe
 document.addEventListener('keyup', e => { if(e.code === 'Space') G.pressing = false; });
 
 // ══════════════════════════════════════════════════════
-//  KİLİT NOKTA: BAŞLANGIÇTA ÇALIŞTIRMA GARANTİSİ
+//  GÜÇLÜ BAŞLATICI - GİTHUB SAYFASI İÇİN YEDEKLEMELİ
 // ══════════════════════════════════════════════════════
-window.onload = () => {
+function initAll() {
     resize();
     initStars();
     initClouds();
     initCityPattern();
-    drawBG(0); 
+    drawBG(0);
+}
+
+window.onload = () => {
+    loadProgress();
+    if (G.day > 1) { document.getElementById('startBtn').innerHTML = `Kaldığın Yerden Devam Et (Gün: ${G.day}) 🌙`; }
+    
+    initAll();
+    
+    // Tarayıcı render gecikmelerini önlemek için yedek çizim tetikleyiciler
+    setTimeout(initAll, 100);
+    setTimeout(initAll, 500);
 };
 
 </script>
